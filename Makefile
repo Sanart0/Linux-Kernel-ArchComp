@@ -1,7 +1,7 @@
 ifneq ($(KERNELRELEASE),)
-obj-m := hello.o
+obj-m := hello1.o hello2.o
+ccflags-y := -I$(src)/include
 else
-
 KDIR ?= /lib/modules/`uname -r`/build
 
 default:

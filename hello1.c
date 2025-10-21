@@ -31,80 +31,54 @@
 
 #include <linux/init.h>
 #include <linux/module.h>
-#include <linux/moduleparam.h>
-#include <linux/printk.h>
 #include <linux/ktime.h>
 #include <linux/slab.h>
 #include <linux/list.h>
+#include "hello1.h"
 
 MODULE_AUTHOR("Sanytskyi Artur <artursanytkpi@gmail.com>");
-MODULE_DESCRIPTION("Hello, world in Linux Kernel Training with timing");
+MODULE_DESCRIPTION("hello1 module for timing");
 MODULE_LICENSE("GPL");
-
-struct hello_event {
-	struct list_head list;
-	ktime_t timestamp;
-};
 
 static LIST_HEAD(hello_list);
 
-static uint repeat = 1;
-module_param(repeat, uint, 0444);
-MODULE_PARM_DESC(repeat, "Number of times to print 'Hello, world!' (default=1)");
-
-static int __init hello_init(void)
+int print_hello(void)
 {
-	int i;
 	struct hello_event *event;
 
-	if (repeat > 10) {
-		pr_err("Invalid repeat: %u. Must not exceed 10.\n", repeat);
-		return -EINVAL;
+	event = kmalloc(sizeof(*event), GFP_KERNEL);
+	if (!event) {
+		pr_err("Failed to allocate memory for event\n");
+		return -ENOMEM;
 	}
 
-	if (repeat == 0 || (repeat >= 5 && repeat <= 10))
-		pr_warn("Strange repeat: %u is suspicious.\n", repeat);
+	event->start_time = ktime_get();
+	pr_info("Hello, world!\n");
+	event->end_time = ktime_get();
 
-	for (i = 0; i < repeat; i++) {
-		event = kmalloc(sizeof(*event), GFP_KERNEL);
-		if (!event) {
-			struct hello_event *tmp;
+	list_add_tail(&event->list, &hello_list);
+	return 0;
+}
+EXPORT_SYMBOL(print_hello);
 
-			list_for_each_entry_safe(
-				event,
-				tmp,
-				&hello_list,
-				list
-			) {
-				list_del(&event->list);
-				kfree(event);
-			}
-			pr_err("Failed alloc memory for event %d\n", i + 1);
-			return -ENOMEM;
-		}
-		event->timestamp = ktime_get();
-		list_add_tail(&event->list, &hello_list);
-		pr_info("Hello, world! %u\n", i + 1);
-	}
-
+static int __init hello1_init(void)
+{
+	pr_info("hello1 module loaded\n");
 	return 0;
 }
 
-static void __exit hello_exit(void)
+static void __exit hello1_exit(void)
 {
 	struct hello_event *event, *tmp;
 
-	list_for_each_entry_safe(
-		event,
-		tmp,
-		&hello_list,
-		list
-	) {
-		pr_info("Event time: %lld ns\n", ktime_to_ns(event->timestamp));
+	list_for_each_entry_safe(event, tmp, &hello_list, list) {
+		pr_info("Event duration: %lld ns\n",
+		  ktime_to_ns(ktime_sub(event->end_time, event->start_time)));
 		list_del(&event->list);
 		kfree(event);
 	}
+	pr_info("hello1 module unloaded\n");
 }
 
-module_init(hello_init);
-module_exit(hello_exit);
+module_init(hello1_init);
+module_exit(hello1_exit);
