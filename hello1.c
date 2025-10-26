@@ -71,12 +71,16 @@ static void __exit hello1_exit(void)
 {
 	struct hello_event *event, *tmp;
 
+	pr_debug("Start list printing\n");
+
 	list_for_each_entry_safe(event, tmp, &hello_list, list) {
-		pr_info("Event duration: %lld ns\n",
+		pr_debug("Event duration: %lld ns\n",
 		  ktime_to_ns(ktime_sub(event->end_time, event->start_time)));
 		list_del(&event->list);
 		kfree(event);
 	}
+	pr_debug("End list printing\n");
+
 	pr_info("hello1 module unloaded\n");
 }
 
